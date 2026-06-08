@@ -146,6 +146,7 @@ th:nth-child(5),td:nth-child(5){width:10%;text-align:center}
       カメラ起動
     </button>
     <button class="btn-gray" id="stopBtn" onclick="カメラ停止()" style="display:none">■ 停止</button>
+    <!-- stopBtnのonclickはスキャン状態によりJS側で動的に切替 -->
   </div>
 
   <div class="result-row">
@@ -239,8 +240,9 @@ function スキャンループ(video) {
       最終コード時刻 = now;
       document.getElementById('result-text').textContent = code;
       document.getElementById('janInput').value = code;
+      スキャン一時停止();
       document.getElementById('priceInput').focus();
-      break;
+      return;
     }
   }).catch(function() {
   }).then(function() {
@@ -292,6 +294,35 @@ function ファイルダウンロード(内容, ファイル名) {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+/* ════════════════════════════════
+   サブ：スキャン一時停止
+   ループ停止・ビデオ静止・ボタン切替
+════════════════════════════════ */
+function スキャン一時停止() {
+  スキャン中 = false;
+  if (スキャンループID) { cancelAnimationFrame(スキャンループID); スキャンループID = null; }
+  var video = document.getElementById('preview');
+  video.pause();
+  var btn = document.getElementById('stopBtn');
+  btn.textContent = '▶ 次をスキャン';
+  btn.onclick = function() { スキャン再開(); };
+}
+
+/* ════════════════════════════════
+   サブ：スキャン再開
+   ビデオ再開・ループ再起動・ボタン切替
+════════════════════════════════ */
+function スキャン再開() {
+  最終コード = '';
+  var video = document.getElementById('preview');
+  video.play();
+  スキャン中 = true;
+  スキャンループ(video);
+  var btn = document.getElementById('stopBtn');
+  btn.textContent = '■ 停止';
+  btn.onclick = function() { カメラ停止(); };
 }
 
 /* ════════════════════════════════
@@ -389,6 +420,7 @@ function リスト追加() {
   ['janInput', 'priceInput', 'fInput'].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('result-text').textContent = '追加しました: ' + jan;
   最終コード = '';
+  // カメラが一時停止中であれば「▶ 次をスキャン」状態を維持（手動で再開）
   document.getElementById('janInput').focus();
 }
 
